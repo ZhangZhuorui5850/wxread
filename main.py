@@ -43,11 +43,14 @@ def cal_hash(input_string):
 
 def get_wr_skey():
     """刷新cookie密钥"""
-    response = requests.post(RENEW_URL, headers=headers, cookies=cookies,
-                             data=json.dumps(COOKIE_DATA, separators=(',', ':')))
-    for cookie in response.headers.get('Set-Cookie', '').split(';'):
-        if "wr_skey" in cookie:
-            return cookie.split('=')[-1][:8]
+    for ql in (True, False, None):
+        payload = dict(COOKIE_DATA)
+        if ql is not None:
+            payload['ql'] = ql
+        response = requests.post(RENEW_URL, headers=headers, cookies=cookies,
+                                 data=json.dumps(payload, separators=(',', ':')), timeout=30)
+        if 'wr_skey' in response.cookies:
+            return response.cookies['wr_skey'][:8]
     return None
 
 def fix_no_synckey():
@@ -59,7 +62,7 @@ def refresh_cookie():
     new_skey = get_wr_skey()
     if new_skey:
         cookies['wr_skey'] = new_skey
-        logging.info(f"✅ 密钥刷新成功，新密钥：{new_skey}")
+        logging.info("✅ 密钥刷新成功")
         logging.info(f"🔄 重新本次阅读。")
     else:
         ERROR_CODE = "❌ 无法获取新密钥或者WXREAD_CURL_BASH配置有误，终止运行。"
